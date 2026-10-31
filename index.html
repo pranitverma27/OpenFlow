@@ -1,0 +1,514 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>OpenFlow</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-gradient: radial-gradient(circle at 50% 0%, #171923 0%, #0b0d13 100%);
+      --card-bg: rgba(22, 27, 34, 0.75);
+      --card-border: rgba(255, 255, 255, 0.08);
+      --accent: #6366f1;
+      --accent-glow: rgba(99, 102, 241, 0.35);
+      --recording-glow: rgba(239, 68, 68, 0.5);
+      --processing-glow: rgba(234, 179, 8, 0.5);
+      --text-main: #f1f5f9;
+      --text-muted: #94a3b8;
+      --text-sub: #64748b;
+      --success: #10b981;
+    }
+
+    * {
+      box-system: border-box;
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      user-select: none;
+    }
+
+    body {
+      background: var(--bg-gradient);
+      color: var(--text-main);
+      font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    /* Window Header */
+    .titlebar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 14px 22px;
+      border-bottom: 1px solid var(--card-border);
+      background: rgba(11, 13, 19, 0.8);
+      backdrop-filter: blur(12px);
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .brand-icon {
+      width: 28px;
+      height: 28px;
+      background: linear-gradient(135deg, #6366f1, #a855f7);
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 0 15px var(--accent-glow);
+    }
+
+    .brand-icon svg {
+      width: 16px;
+      height: 16px;
+      fill: #ffffff;
+    }
+
+    .brand-title {
+      font-size: 15px;
+      font-weight: 700;
+      letter-spacing: -0.3px;
+      color: #fff;
+    }
+
+    .brand-badge {
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      padding: 3px 7px;
+      border-radius: 999px;
+      background: rgba(99, 102, 241, 0.15);
+      color: #818cf8;
+      font-weight: 600;
+      border: 1px solid rgba(99, 102, 241, 0.25);
+    }
+
+    .status-pill {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: rgba(255, 255, 255, 0.04);
+      padding: 6px 14px;
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: 500;
+      border: 1px solid var(--card-border);
+    }
+
+    .status-indicator {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #10b981;
+      transition: all 0.3s ease;
+    }
+
+    .status-pill.recording .status-indicator {
+      background: #ef4444;
+      box-shadow: 0 0 10px var(--recording-glow);
+      animation: pulse-red 1.2s infinite;
+    }
+
+    .status-pill.processing .status-indicator {
+      background: #eab308;
+      box-shadow: 0 0 10px var(--processing-glow);
+      animation: pulse-yellow 1s infinite;
+    }
+
+    @keyframes pulse-red {
+      0% { transform: scale(0.95); opacity: 0.7; }
+      50% { transform: scale(1.3); opacity: 1; }
+      100% { transform: scale(0.95); opacity: 0.7; }
+    }
+
+    @keyframes pulse-yellow {
+      0% { transform: scale(0.95); opacity: 0.7; }
+      50% { transform: scale(1.3); opacity: 1; }
+      100% { transform: scale(0.95); opacity: 0.7; }
+    }
+
+    /* Main Container */
+    .container {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      padding: 24px;
+      gap: 20px;
+      overflow-y: auto;
+    }
+
+    /* Control Hero Card */
+    .hero-card {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 18px;
+      padding: 28px 24px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 20px;
+      position: relative;
+      overflow: hidden;
+      backdrop-filter: blur(20px);
+      box-shadow: 0 12px 30px rgba(0, 0, 0, 0.4);
+    }
+
+    .hero-card::before {
+      content: '';
+      position: absolute;
+      top: -50px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 240px;
+      height: 100px;
+      background: var(--accent);
+      filter: blur(80px);
+      opacity: 0.15;
+      pointer-events: none;
+    }
+
+    /* Dictation Big Button */
+    .mic-button-wrapper {
+      position: relative;
+    }
+
+    .mic-button {
+      width: 88px;
+      height: 88px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #1e293b, #0f172a);
+      border: 2px solid rgba(255, 255, 255, 0.12);
+      color: #fff;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+      outline: none;
+    }
+
+    .mic-button:hover {
+      transform: scale(1.05);
+      border-color: rgba(99, 102, 241, 0.6);
+      box-shadow: 0 12px 30px var(--accent-glow);
+    }
+
+    .mic-button svg {
+      width: 36px;
+      height: 36px;
+      fill: #cbd5e1;
+      transition: fill 0.2s ease;
+    }
+
+    .mic-button.recording {
+      background: linear-gradient(135deg, #ef4444, #dc2626);
+      border-color: #f87171;
+      box-shadow: 0 0 35px var(--recording-glow);
+      animation: record-ring 1.8s infinite;
+    }
+
+    .mic-button.recording svg {
+      fill: #ffffff;
+    }
+
+    .mic-button.processing {
+      background: linear-gradient(135deg, #d97706, #b45309);
+      border-color: #fcd34d;
+      box-shadow: 0 0 30px var(--processing-glow);
+    }
+
+    @keyframes record-ring {
+      0% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7); }
+      70% { box-shadow: 0 0 0 18px rgba(239, 68, 68, 0); }
+      100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
+    }
+
+    .action-instruction {
+      font-size: 14px;
+      color: var(--text-muted);
+      text-align: center;
+    }
+
+    .action-instruction kbd {
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      border-radius: 6px;
+      padding: 3px 8px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 12px;
+      color: #e2e8f0;
+      box-shadow: 0 2px 0 rgba(0, 0, 0, 0.2);
+    }
+
+    /* Transcription Display Area */
+    .transcript-card {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 16px;
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      flex: 1;
+      min-height: 180px;
+      backdrop-filter: blur(16px);
+    }
+
+    .card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .card-title {
+      font-size: 13px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      color: var(--text-sub);
+    }
+
+    .card-actions {
+      display: flex;
+      gap: 8px;
+    }
+
+    .btn-secondary {
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid var(--card-border);
+      color: var(--text-muted);
+      font-size: 12px;
+      padding: 5px 12px;
+      border-radius: 8px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.2s ease;
+    }
+
+    .btn-secondary:hover {
+      background: rgba(255, 255, 255, 0.1);
+      color: #fff;
+    }
+
+    .transcript-box {
+      flex: 1;
+      background: rgba(0, 0, 0, 0.25);
+      border: 1px solid rgba(255, 255, 255, 0.04);
+      border-radius: 10px;
+      padding: 16px;
+      font-size: 16px;
+      line-height: 1.6;
+      color: var(--text-main);
+      overflow-y: auto;
+      user-select: text;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+
+    .transcript-box.empty {
+      color: var(--text-sub);
+      font-style: italic;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    /* Quick Settings Grid */
+    .settings-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 14px;
+    }
+
+    .setting-item {
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid var(--card-border);
+      border-radius: 12px;
+      padding: 12px 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .setting-label {
+      font-size: 11px;
+      color: var(--text-sub);
+      text-transform: uppercase;
+      font-weight: 600;
+      letter-spacing: 0.5px;
+    }
+
+    .setting-value {
+      font-size: 13px;
+      font-weight: 500;
+      color: #e2e8f0;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .status-check {
+      color: var(--success);
+      display: inline-flex;
+    }
+  </style>
+</head>
+<body>
+  <!-- Window Header -->
+  <div class="titlebar">
+    <div class="brand">
+      <div class="brand-icon">
+        <svg viewBox="0 0 24 24"><path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3z"/><path d="M17 11c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z"/></svg>
+      </div>
+      <div class="brand-title">OpenFlow</div>
+      <div class="brand-badge">Local Offline AI</div>
+    </div>
+    <div id="statusPill" class="status-pill">
+      <div class="status-indicator"></div>
+      <span id="statusText">Ready</span>
+    </div>
+  </div>
+
+  <!-- Main Workspace -->
+  <div class="container">
+    <!-- Hero Dictation Card -->
+    <div class="hero-card">
+      <div class="mic-button-wrapper">
+        <button id="recordBtn" class="mic-button" title="Click to start/stop dictation">
+          <svg viewBox="0 0 24 24"><path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3z"/><path d="M17 11c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z"/></svg>
+        </button>
+      </div>
+      <div class="action-instruction">
+        Click microphone or press <kbd>Ctrl</kbd> + <kbd>Shift</kbd> + <kbd>Space</kbd> anywhere to dictate
+      </div>
+    </div>
+
+    <!-- Live Transcription Output Area -->
+    <div class="transcript-card">
+      <div class="card-header">
+        <span class="card-title">Live Dictation Transcript</span>
+        <div class="card-actions">
+          <button id="copyBtn" class="btn-secondary">Copy</button>
+          <button id="clearBtn" class="btn-secondary">Clear</button>
+        </div>
+      </div>
+      <div id="transcriptBox" class="transcript-box empty">Dictated text will appear here and automatically paste into your active app...</div>
+    </div>
+
+    <!-- Status & Hardware Metrics -->
+    <div class="settings-row">
+      <div class="setting-item">
+        <span class="setting-label">Speech Engine</span>
+        <span class="setting-value"><span class="status-check">●</span> faster-whisper (tiny.en)</span>
+      </div>
+      <div class="setting-item">
+        <span class="setting-label">Global Shortcut</span>
+        <span class="setting-value"><kbd>Ctrl+Shift+Space</kbd></span>
+      </div>
+      <div class="setting-item">
+        <span class="setting-label">Execution Mode</span>
+        <span class="setting-value"><span class="status-check">●</span> 100% Local / Zero Cloud</span>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    let isRecording = false;
+    let isProcessing = false;
+
+    const recordBtn = document.getElementById('recordBtn');
+    const statusPill = document.getElementById('statusPill');
+    const statusText = document.getElementById('statusText');
+    const transcriptBox = document.getElementById('transcriptBox');
+    const copyBtn = document.getElementById('copyBtn');
+    const clearBtn = document.getElementById('clearBtn');
+
+    function updateState(state, text) {
+      statusPill.className = 'status-pill ' + state;
+      statusText.innerText = text;
+      recordBtn.className = 'mic-button ' + state;
+
+      if (state === 'recording') {
+        isRecording = true;
+        isProcessing = false;
+      } else if (state === 'processing') {
+        isRecording = false;
+        isProcessing = true;
+      } else {
+        isRecording = false;
+        isProcessing = false;
+      }
+    }
+
+    recordBtn.addEventListener('click', () => {
+      if (isProcessing) return;
+      if (window.pywebview && window.pywebview.api) {
+        window.pywebview.api.toggle_recording();
+      }
+    });
+
+    copyBtn.addEventListener('click', () => {
+      const text = transcriptBox.innerText;
+      if (text && !transcriptBox.classList.contains('empty')) {
+        navigator.clipboard.writeText(text);
+        copyBtn.innerText = 'Copied!';
+        setTimeout(() => copyBtn.innerText = 'Copy', 1500);
+      }
+    });
+
+    clearBtn.addEventListener('click', () => {
+      if (window.pywebview && window.pywebview.api) {
+        window.pywebview.api.clear_transcript();
+      }
+      transcriptBox.classList.add('empty');
+      transcriptBox.innerText = 'Dictated text will appear here and automatically paste into your active app...';
+    });
+
+    // Native Bridge Hooks called from Python
+    window.onRecordingStarted = function() {
+      updateState('recording', 'Recording...');
+      // Clear previous snippet on new recording start to keep display clean and isolated
+      transcriptBox.classList.add('empty');
+      transcriptBox.innerText = 'Listening to speech...';
+    };
+
+    window.onRecordingError = function(errorMsg) {
+      updateState('', 'Mic Error');
+      alert(errorMsg || 'Unable to access microphone. Please check your recording device.');
+    };
+
+    window.onProcessingStarted = function() {
+      updateState('processing', 'Transcribing...');
+      transcriptBox.classList.add('empty');
+      transcriptBox.innerText = 'Transcribing speech with local Whisper...';
+    };
+
+    window.onTranscriptionComplete = function(text) {
+      updateState('', 'Ready');
+      if (text && text.trim().length > 0) {
+        transcriptBox.classList.remove('empty');
+        // Display each distinct recording's snippet cleanly
+        transcriptBox.innerText = text;
+        transcriptBox.scrollTop = transcriptBox.scrollHeight;
+      } else {
+        transcriptBox.classList.add('empty');
+        transcriptBox.innerText = 'Dictated text will appear here and automatically paste into your active app...';
+      }
+    };
+  </script>
+</body>
+</html>

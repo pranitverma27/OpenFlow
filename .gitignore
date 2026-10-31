@@ -1,0 +1,58 @@
+# Python bytecode & cache
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+
+# Virtual environments
+venv/
+.venv/
+env/
+ENV/
+env.bak/
+venv.bak/
+
+# Build artifacts & distribution
+build/
+dist/
+*.egg-info/
+.eggs/
+
+# PyInstaller temporary files
+*.manifest
+*.spec.bak
+
+# Large local model weights (CTranslate2 binaries)
+models/*/model.bin
+models/*/model.safetensors
+models/*/*.bin
+models/*/*.safetensors
+
+# Local scratch & benchmark audio recordings
+speech_sample.wav
+*.wav
+*.mp3
+*.flac
+*.ogg
+
+# Secrets, credentials & local environment configs
+.env
+.env.*
+*.key
+*.pem
+credentials.json
+secrets.json
+
+# Logs & temporary runtime files
+*.log
+*.tmp
+*.bak
+.DS_Store
+Thumbs.db
+
+# IDE & Editor temporary state
+.vscode/
+.idea/
+*.swp
+*.swo
