@@ -56,3 +56,16 @@ Thumbs.db
 .idea/
 *.swp
 *.swo
+
+# Test and release build outputs
+build_*/
+dist_*/
+release/
+release_*/
+user_data/
+test_appdata/
+test_temp/
+stress_test_results.json
+installer_build/payload.zip
+installer_build/__pycache__/
+

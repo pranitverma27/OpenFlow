@@ -12,16 +12,35 @@ project_dir = os.path.abspath(SPECPATH)
 datas = [
     (os.path.join(project_dir, 'index.html'), '.'),
     (os.path.join(project_dir, 'models', 'tiny.en'), os.path.join('models', 'tiny.en')),
+    (os.path.join(project_dir, 'models', 'shruti-hi'), os.path.join('models', 'shruti-hi')),
 ]
 
-# Collect sounddevice data (PortAudio binaries)
+# Collect package data
 datas += collect_data_files('_sounddevice_data')
-datas += collect_data_files('pywebview')
+datas += collect_data_files('webview')
+datas += collect_data_files('onnxruntime')
+
+# Explicitly ensure all pywebview / Edge WebView2 interop libraries and platform runtimes are packaged
+import webview
+webview_base = os.path.dirname(webview.__file__)
+webview_lib = os.path.join(webview_base, 'lib')
+if os.path.exists(webview_lib):
+    datas.append((webview_lib, os.path.join('webview', 'lib')))
+    runtimes_dir = os.path.join(webview_lib, 'runtimes')
+    if os.path.exists(runtimes_dir):
+        for arch in os.listdir(runtimes_dir):
+            arch_native = os.path.join(runtimes_dir, arch, 'native')
+            if os.path.exists(arch_native):
+                datas.append((arch_native, arch))
+                datas.append((arch_native, os.path.join('runtimes', arch, 'native')))
+                datas.append((arch_native, os.path.join('webview', 'lib', 'runtimes', arch, 'native')))
 
 # Binary dynamic libraries
 binaries = []
 binaries += collect_dynamic_libs('ctranslate2')
 binaries += collect_dynamic_libs('_sounddevice_data')
+binaries += collect_dynamic_libs('onnxruntime')
+binaries += collect_dynamic_libs('webview')
 
 # Hidden imports required by dynamic dispatch
 hiddenimports = [
@@ -29,6 +48,7 @@ hiddenimports = [
     '_sounddevice_data',
     'faster_whisper',
     'ctranslate2',
+    'onnxruntime',
     'keyboard',
     'pyperclip',
     'pywebview',
@@ -38,11 +58,20 @@ hiddenimports = [
     'pythonnet',
     'engine_audio',
     'engine_transcription',
+    'engine_shruti',
+    'engine_transliterate',
+    'engine_corrections',
     'engine_injector',
+    'language_config',
+    'ui_overlay',
     'utils_paths',
+    'utils_logger',
+    'utils_single_instance',
+    'engine_hotkey',
 ]
 hiddenimports += collect_submodules('ctranslate2')
 hiddenimports += collect_submodules('faster_whisper')
+hiddenimports += collect_submodules('onnxruntime')
 
 a = Analysis(
     ['main.py'],
@@ -72,7 +101,7 @@ exe = EXE(
     bootloader_ignore_signals=False,
     strip=False,
     upx=False,
-    console=True, # Console visible for diagnostic purposes during Milestone 1
+    console=False, # Windowed desktop app
     disable_windowed_traceback=False,
     argv_emulation=False,
     target_arch=None,
