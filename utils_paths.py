@@ -50,12 +50,30 @@ def get_model_path(model_name: str = "tiny.en") -> str:
 
 def get_user_data_dir() -> str:
     """
-    Returns the writable user data directory in %APPDATA%/OpenFlow.
+    Returns the writable user data directory in %APPDATA%/OpenFlow,
+    or falls back to a local user_data folder if %APPDATA% is write-protected (e.g. sandbox or portable mode).
     Ensures directory exists before returning.
     """
     appdata = os.environ.get("APPDATA")
-    if not appdata:
-        appdata = os.path.expanduser("~")
-    user_dir = os.path.join(appdata, "OpenFlow")
-    os.makedirs(user_dir, exist_ok=True)
-    return user_dir
+    candidates = []
+    if appdata:
+        candidates.append(os.path.join(appdata, "OpenFlow"))
+    candidates.append(os.path.join(os.path.expanduser("~"), ".openflow"))
+    candidates.append(os.path.join(os.path.dirname(os.path.abspath(__file__)), "user_data"))
+
+    for candidate in candidates:
+        try:
+            os.makedirs(candidate, exist_ok=True)
+            # Test write access
+            test_file = os.path.join(candidate, ".write_test")
+            with open(test_file, "w") as f:
+                f.write("ok")
+            os.remove(test_file)
+            return candidate
+        except (PermissionError, OSError):
+            continue
+
+    # Absolute fallback to current directory
+    fallback = os.path.join(os.path.dirname(os.path.abspath(__file__)), "user_data")
+    os.makedirs(fallback, exist_ok=True)
+    return fallback
