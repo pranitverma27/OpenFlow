@@ -40,6 +40,54 @@
       overflow: hidden;
     }
 
+    /* Language Mode Selector Tabs */
+    .language-tabs {
+      display: flex;
+      background: rgba(0, 0, 0, 0.35);
+      padding: 4px;
+      border-radius: 12px;
+      border: 1px solid var(--card-border);
+      gap: 4px;
+      margin-bottom: 2px;
+    }
+
+    .lang-tab {
+      flex: 1;
+      padding: 8px 12px;
+      border-radius: 8px;
+      border: none;
+      background: transparent;
+      color: var(--text-muted);
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    .lang-tab:hover {
+      color: var(--text-main);
+      background: rgba(255, 255, 255, 0.05);
+    }
+
+    .lang-tab.active {
+      background: var(--accent);
+      color: #ffffff;
+      box-shadow: 0 2px 10px var(--accent-glow);
+    }
+
+    .lang-badge {
+      font-size: 10px;
+      padding: 2px 6px;
+      border-radius: 4px;
+      background: rgba(255, 255, 255, 0.15);
+      font-family: 'JetBrains Mono', monospace;
+      font-weight: 500;
+    }
+
     /* Window Header */
     .titlebar {
       display: flex;
@@ -385,6 +433,22 @@
 
   <!-- Main Workspace -->
   <div class="container">
+    <!-- Language Selection Tabs -->
+    <div class="language-tabs">
+      <button class="lang-tab active" id="tabEn" onclick="switchLanguage('en')">
+        <span>English</span>
+        <span class="lang-badge">tiny.en</span>
+      </button>
+      <button class="lang-tab" id="tabHi" onclick="switchLanguage('hi')">
+        <span>Hindi (हिन्दी)</span>
+        <span class="lang-badge">Shruti</span>
+      </button>
+      <button class="lang-tab" id="tabHgl" onclick="switchLanguage('hinglish')">
+        <span>Hinglish</span>
+        <span class="lang-badge">Roman</span>
+      </button>
+    </div>
+
     <!-- Hero Dictation Card -->
     <div class="hero-card">
       <div class="mic-button-wrapper">
@@ -413,11 +477,11 @@
     <div class="settings-row">
       <div class="setting-item">
         <span class="setting-label">Speech Engine</span>
-        <span class="setting-value"><span class="status-check">●</span> faster-whisper (tiny.en)</span>
+        <span class="setting-value" id="engineDisplay"><span class="status-check">●</span> faster-whisper (tiny.en)</span>
       </div>
       <div class="setting-item">
         <span class="setting-label">Global Shortcut</span>
-        <span class="setting-value"><kbd>Ctrl+Shift+Space</kbd></span>
+        <span class="setting-value" id="shortcutDisplay"><kbd>Ctrl+Shift+Space</kbd> <span id="shortcutBadge" class="status-check" title="Active">● Active</span></span>
       </div>
       <div class="setting-item">
         <span class="setting-label">Execution Mode</span>
@@ -453,6 +517,49 @@
         isProcessing = false;
       }
     }
+
+    let currentLanguage = 'en';
+
+    function switchLanguage(lang) {
+      currentLanguage = lang;
+      document.getElementById('tabEn').classList.toggle('active', lang === 'en');
+      document.getElementById('tabHi').classList.toggle('active', lang === 'hi');
+      document.getElementById('tabHgl').classList.toggle('active', lang === 'hinglish');
+
+      const engineDisplay = document.getElementById('engineDisplay');
+      if (lang === 'en') {
+        engineDisplay.innerHTML = '<span class="status-check">●</span> faster-whisper (tiny.en)';
+      } else if (lang === 'hi') {
+        engineDisplay.innerHTML = '<span class="status-check">●</span> Udgam Shruti (Devanagari)';
+      } else if (lang === 'hinglish') {
+        engineDisplay.innerHTML = '<span class="status-check">●</span> Shruti + Roman Translit';
+      }
+
+      function sendModeToBackend() {
+        if (window.pywebview && window.pywebview.api && window.pywebview.api.set_language_mode) {
+          window.pywebview.api.set_language_mode(lang).then(function(res) {
+            console.log('[OpenFlow UI] Mode confirmed by backend:', lang, res);
+          }).catch(function(err) {
+            console.error('[OpenFlow UI] Failed to set mode:', err);
+          });
+        } else {
+          // If bridge is not yet ready, retry shortly
+          setTimeout(sendModeToBackend, 200);
+        }
+      }
+      sendModeToBackend();
+    }
+
+    // Synchronize initial mode when pywebview bridge is ready
+    window.addEventListener('pywebviewready', function() {
+      if (window.pywebview && window.pywebview.api && window.pywebview.api.get_language_mode) {
+        window.pywebview.api.get_language_mode().then(function(mode) {
+          if (mode) {
+            switchLanguage(mode);
+          }
+        });
+      }
+    });
 
     recordBtn.addEventListener('click', () => {
       if (isProcessing) return;
@@ -507,6 +614,23 @@
       } else {
         transcriptBox.classList.add('empty');
         transcriptBox.innerText = 'Dictated text will appear here and automatically paste into your active app...';
+      }
+    };
+    // Hotkey Status Notification
+    window.onHotkeyStatusChanged = function(isActive) {
+      const badge = document.getElementById('shortcutBadge');
+      if (badge) {
+        if (isActive) {
+          badge.className = 'status-check';
+          badge.innerHTML = '● Active';
+          badge.title = 'Global hotkey Ctrl+Shift+Space is actively listening';
+          badge.style.color = 'var(--success)';
+        } else {
+          badge.className = 'status-warning';
+          badge.innerHTML = '⚠ Click Mic Below';
+          badge.title = 'Global hotkey hook not active in current session. Use the clickable mic button below.';
+          badge.style.color = '#f59e0b';
+        }
       }
     };
   </script>
